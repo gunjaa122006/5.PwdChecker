@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Strength Checker</title>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.0.7/build/spline-viewer.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-very-weak: #dc2626;
+            --color-weak: #f97316;
+            --color-fair: #f59e0b;
+            --color-good: #10b981;
+            --color-strong: #059669;
+            --color-text-primary: #0f172a;
+            --color-text-secondary: #64748b;
+            --color-text-muted: #94a3b8;
+            --color-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --color-card: #ffffff;
+            --color-border: #e2e8f0;
+            --color-input-bg: #f8fafc;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+            padding: 3rem 1rem;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: -2;
+        }
+
+        #spline-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.9;
+        }
+
+        .watermark-blocker {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 40px;
+            background:  #0d0d0d ;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.05rem;
+            font-weight: 400;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--color-card);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-xl);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--color-text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .password-input-container {
+            position: relative;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem 3.5rem 1rem 1.25rem;
+            font-size: 1.05rem;
+            border: 2px solid var(--color-border);
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: var(--color-input-bg);
+        }
+
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .toggle-visibility {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(102, 126, 234, 0.05);
+            border: none;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            padding: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .toggle-visibility:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .toggle-visibility:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .toggle-visibility svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .strength-bar-container {
+            height: 10px;
+            background: linear-gradient(to right, #f1f5f9, #e2e8f0);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .strength-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+            border-radius: 10px;
+        }
+
+        .strength-bar.very-weak {
+            background: linear-gradient(90deg, var(--color-very-weak), #ef4444);
+            width: 20%;
+        }
+
+        .strength-bar.weak {
+            background: linear-gradient(90deg, var(--color-weak), #fb923c);
+            width: 40%;
+        }
+
+        .strength-bar.fair {
+            background: linear-gradient(90deg, var(--color-fair), #fbbf24);
+            width: 60%;
+        }
+
+        .strength-bar.good {
+            background: linear-gradient(90deg, var(--color-good), #34d399);
+            width: 80%;
+        }
+
+        .strength-bar.strong {
+            background: linear-gradient(90deg, var(--color-strong), #10b981);
+            width: 100%;
+        }
+
+        .strength-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            color: var(--color-text-secondary);
+        }
+
+        .strength-label .badge {
+            padding: 0.5rem 1.25rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .strength-label .badge.very-weak {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: var(--color-very-weak);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .strength-label .badge.weak {
+            background: linear-gradient(135deg, #ffedd5, #fed7aa);
+            color: var(--color-weak);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .strength-label .badge.fair {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .strength-label .badge.good {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            color: var(--color-good);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .strength-label .badge.strong {
+            background: linear-gradient(135deg, #a7f3d0, #6ee7b7);
+            color: var(--color-strong);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .feedback-section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .feedback-section.show {
+            display: block;
+        }
+
+        .feedback-item {
+            padding: 1rem 1.25rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 0.875rem;
+            font-size: 0.9rem;
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+        }
+
+        .feedback-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .feedback-item.warning {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border-left: 4px solid var(--color-fair);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .feedback-item.error {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border-left: 4px solid var(--color-very-weak);
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+
+        .feedback-item.success {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left: 4px solid var(--color-strong);
+            border-color: rgba(5, 150, 105, 0.2);
+        }
+
+        .feedback-title {
+            font-weight: 700;
+            margin-bottom: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.925rem;
+        }
+
+        .feedback-description {
+            color: var(--color-text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .suggestions {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--color-border);
+        }
+
+        .suggestions-title {
+            font-weight: 700;
+            margin-bottom: 0.875rem;
+            font-size: 0.925rem;
+            color: var(--color-text-primary);
+        }
+
+        .suggestion-list {
+            list-style: none;
+        }
+
+        .suggestion-list li {
+            padding: 0.625rem 0 0.625rem 1.75rem;
+            position: relative;
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+        }
+
+        .suggestion-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0.5rem;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric {
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #667eea;
+            line-height: 1;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.875rem;
+            animation: fadeIn 0.8s ease 0.3s both;
+        }
+
+        footer a {
+            color: rgba(255, 255, 255, 0.95);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <spline-viewer id="spline-background" url="https://prod.spline.design/Y6FmfLKeVoQdRqWI/scene.splinecode"></spline-viewer>
+    <div class="watermark-blocker"></div>
+    
+    <div class="container">
+        <header>
+            <h1>Password Strength Checker</h1>
+            <p class="subtitle">Evaluate your password security with real-time, actionable feedback</p>
+        </header>
+
+        <div class="card">
+            <div class="input-wrapper">
+                <label for="password">Enter Password</label>
+                <div class="password-input-container">
+                    <input type="password" id="password" placeholder="Type your password..." autocomplete="off">
+                    <button type="button" class="toggle-visibility" id="toggleBtn" aria-label="Toggle password visibility">
+                        <svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg class="eye-off-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="strength-bar-container">
+                <div class="strength-bar" id="strengthBar"></div>
+            </div>
+
+            <div class="strength-label" id="strengthLabel"></div>
+
+            <div class="metrics" id="metrics"></div>
+
+            <div class="feedback-section" id="feedbackSection">
+                <div id="feedbackContent"></div>
+                <div class="suggestions" id="suggestionsSection" style="display: none;">
+                    <div class="suggestions-title">Suggestions to Improve Strength</div>
+                    <ul class="suggestion-list" id="suggestionsList"></ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p> All evaluation happens locally in your browser. Passwords are never transmitted or stored.</p>
+            <p style="margin-top: 0.5rem;">Built following <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP guidelines</a></p>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * Password Strength Checker - Production Grade
+         * 
+         * Architecture:
+         * - PatternDetector: Identifies security-relevant patterns
+         * - PasswordScorer: Calculates strength score based on multiple factors
+         * - UIRenderer: Handles all DOM updates and user feedback
+         * - PasswordChecker: Main controller coordinating all modules
+         */
+
+        // ============================================================================
+        // PATTERN DETECTOR MODULE
+        // Identifies various password patterns that affect security
+        // ============================================================================
+        const PatternDetector = {
+            /**
+             * Common passwords list (top 100 most commonly breached passwords)
+             * Source: Compilation from breach databases and NCSC research
+             */
+            commonPasswords: new Set([
+                'password', '123456', '123456789', '12345678', '12345', '1234567', 'password1',
+                '123123', '1234567890', '000000', 'qwerty', 'abc123', 'password123', 'iloveyou',
+                'welcome', 'monkey', 'dragon', 'master', 'admin', 'letmein', 'login', 'princess',
+                'qwertyuiop', 'solo', 'passw0rd', 'starwars', 'sunshine', 'shadow', 'ashley',
+                'football', 'jesus', 'michael', 'ninja', 'mustang', 'password!', 'superman',
+                'batman', 'trustno1', 'hello', 'freedom', 'computer', 'charlie', 'whatever',
+                'pass123', 'summer', 'winter', 'spring', 'autumn', 'master123', 'admin123',
+                'root', 'toor', 'test', 'test123', 'demo', 'demo123', 'sample', 'example',
+                'changeme', 'default', 'user', 'guest', 'pass', 'passpass', '111111', '222222',
+                '333333', '444444', '555555', '666666', '777777', '888888', '999999', 'azerty',
+                'qwerty123', 'baseball', 'flower', 'pepper', 'hunter', 'jordan', 'jennifer',
+                'anthony', 'joshua', 'matthew', 'daniel', 'thomas', 'tigger', 'nicole', 'secret',
+                'cookie', 'love', 'lovely', 'loveme', 'cheese', 'arsenal', 'chelsea', 'liverpool'
+            ]),
+
+            /**
+             * Keyboard pattern sequences that indicate predictable passwords
+             */
+            keyboardPatterns: [
+                'qwerty', 'asdfgh', 'zxcvbn', 'qwertyui', 'asdfghjk', 'zxcvbnm',
+                '1qaz2wsx', '!qaz@wsx', 'qazwsx', 'qweasd', 'zaqwsx', '1q2w3e4r',
+                'qwerasdf', 'asdzxc', '147258369', '159357', '123qwe', 'qwe123'
+            ],
+
+            /**
+             * Detects repeated characters (e.g., "aaa", "111")
+             * Repeated chars reduce entropy and are easier to crack
+             */
+            hasRepeatedCharacters(password) {
+                // Match 3 or more consecutive identical characters
+                const repeatedPattern = /(.)\1{2,}/;
+                return repeatedPattern.test(password);
+            },
+
+            /**
+             * Detects sequential characters (ascending or descending)
+             * Examples: "abcd", "4321", "zyxw"
+             */
+            hasSequentialCharacters(password) {
+                const lower = password.toLowerCase();
+                
+                // Check for sequential letters or numbers
+                for (let i = 0; i < lower.length - 2; i++) {
+                    const charCode1 = lower.charCodeAt(i);
+                    const charCode2 = lower.charCodeAt(i + 1);
+                    const charCode3 = lower.charCodeAt(i + 2);
+                    
+                    // Ascending sequence (abc, 123)
+                    if (charCode2 === charCode1 + 1 && charCode3 === charCode2 + 1) {
+                        return true;
+                    }
+                    
+                    // Descending sequence (cba, 321)
+                    if (charCode2 === charCode1 - 1 && charCode3 === charCode2 - 1) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            },
+
+            /**
+             * Detects common keyboard patterns (qwerty, asdfgh, etc.)
+             */
+            hasKeyboardPattern(password) {
+                const lower = password.toLowerCase();
+                return this.keyboardPatterns.some(pattern => lower.includes(pattern));
+            },
+
+            /**
+             * Checks if password is in common passwords list
+             * Also checks variations with simple transformations
+             */
+            isCommonPassword(password) {
+                const lower = password.toLowerCase();
+                
+                // Direct match
+                if (this.commonPasswords.has(lower)) {
+                    return true;
+                }
+                
+                // Check with numbers stripped (password123 -> password)
+                const stripped = lower.replace(/[0-9]/g, '');
+                if (stripped.length > 0 && this.commonPasswords.has(stripped)) {
+                    return true;
+                }
+                
+                // Check with special chars stripped (password! -> password)
+                const specialStripped = lower.replace(/[^a-z0-9]/g, '');
+                if (specialStripped.length > 0 && this.commonPasswords.has(specialStripped)) {
+                    return true;
+                }
+                
+                return false;
+            },
+
+            /**
+             * Detects predictable leet speak substitutions
+             * Example: P@ssw0rd (@ for a, 0 for o)
+             * These provide minimal security improvement but are commonly used
+             */
+            hasLeetSpeak(password) {
+                const leetMap = {
+                    '@': 'a', '4': 'a', 
+                    '3': 'e', 
+                    '1': 'i', '!': 'i',
+                    '0': 'o',
+                    '5': 's', '$': 's',
+                    '7': 't',
+                    '8': 'b'
+                };
+                
+                // Replace leet speak chars with normal chars
+                let normalized = password.toLowerCase();
+                for (const [leet, normal] of Object.entries(leetMap)) {
+                    normalized = normalized.replace(new RegExp(leet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), normal);
+                }
+                
+                // If normalized version is a common password, then leet speak was used
+                return normalized !== password.toLowerCase() && this.commonPasswords.has(normalized);
+            },
+
+            /**
+             * Detects date patterns (DDMMYYYY, YYYY-MM-DD, etc.)
+             * Dates are easily guessable from public information
+             */
+            hasDatePattern(password) {
+                // Common date formats
+                const datePatterns = [
+                    /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/, // DD/MM/YYYY or MM/DD/YYYY
+                    /\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2}/, // YYYY/MM/DD
+                    /\d{8}/, // DDMMYYYY or YYYYMMDD
+                    /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2}/, // DD/MM/YY
+                ];
+                
+                return datePatterns.some(pattern => pattern.test(password));
+            },
+
+            /**
+             * Analyzes character set diversity
+             * Returns which character types are present
+             */
+            getCharacterSets(password) {
+                return {
+                    lowercase: /[a-z]/.test(password),
+                    uppercase: /[A-Z]/.test(password),
+                    digits: /[0-9]/.test(password),
+                    symbols: /[^a-zA-Z0-9]/.test(password),
+                    unicode: /[^\x00-\x7F]/.test(password) // Non-ASCII characters
+                };
+            },
+
+            /**
+             * Counts distinct character sets used
+             */
+            getCharsetDiversity(password) {
+                const sets = this.getCharacterSets(password);
+                return Object.values(sets).filter(Boolean).length;
+            }
+        };
+
+        // ============================================================================
+        // PASSWORD SCORER MODULE
+        // Calculates password strength based on entropy, patterns, and best practices
+        // ============================================================================
+        const PasswordScorer = {
+            /**
+             * Calculate password strength score (0-100)
+             * 
+             * Scoring methodology:
+             * - Base entropy calculation (0-60 points)
+             * - Character set diversity bonus (0-20 points)
+             * - Pattern penalties (-50 to 0 points)
+             * - Length bonuses (0-20 points)
+             * 
+             * This follows NIST SP 800-63B guidance on password strength
+             */
+            calculateScore(password) {
+                if (!password || password.length === 0) {
+                    return {
+                        score: 0,
+                        level: 'none',
+                        entropy: 0,
+                        issues: [],
+                        suggestions: []
+                    };
+                }
+
+                let score = 0;
+                const issues = [];
+                const suggestions = [];
+                
+                // Base entropy calculation
+                const entropyScore = this.calculateEntropy(password);
+                score += Math.min(entropyScore, 60); // Cap base entropy at 60 points
+
+                // Character set diversity (up to 20 points)
+                const diversityScore = this.calculateDiversityScore(password);
+                score += diversityScore;
+
+                // Length bonus (longer passwords are exponentially harder to crack)
+                const lengthBonus = this.calculateLengthBonus(password.length);
+                score += lengthBonus;
+
+                // Pattern detection and penalties
+                const patterns = this.detectPatterns(password);
+                score -= patterns.penalty;
+                issues.push(...patterns.issues);
+
+                // Generate suggestions based on findings
+                suggestions.push(...this.generateSuggestions(password, patterns));
+
+                // Ensure score stays within 0-100
+                score = Math.max(0, Math.min(100, score));
+
+                return {
+                    score: Math.round(score),
+                    level: this.getStrengthLevel(score),
+                    entropy: this.calculatePasswordEntropy(password),
+                    issues,
+                    suggestions,
+                    charsetCount: PatternDetector.getCharsetDiversity(password),
+                    length: password.length
+                };
+            },
+
+            /**
+             * Calculate password entropy based on charset and length
+             * Entropy = log2(charset_size^length)
+             * 
+             * Higher entropy = more possible combinations = harder to crack
+             */
+            calculatePasswordEntropy(password) {
+                const charsets = PatternDetector.getCharacterSets(password);
+                let charsetSize = 0;
+
+                if (charsets.lowercase) charsetSize += 26;
+                if (charsets.uppercase) charsetSize += 26;
+                if (charsets.digits) charsetSize += 10;
+                if (charsets.symbols) charsetSize += 32; // Common symbols
+                if (charsets.unicode) charsetSize += 100; // Rough estimate for unicode
+
+                // Entropy = log2(possible_combinations)
+                // For a password of length L using charset of size N: entropy = L * log2(N)
+                const entropy = password.length * Math.log2(charsetSize || 1);
+                return Math.round(entropy * 10) / 10; // Round to 1 decimal
+            },
+
+            /**
+             * Convert entropy to a score contribution (0-60 points)
+             * 
+             * Entropy benchmarks:
+             * < 28 bits: Very weak (instant crack)
+             * 28-35 bits: Weak (seconds to crack)
+             * 36-59 bits: Fair (hours to crack)
+             * 60-127 bits: Good (years to crack)
+             * 128+ bits: Strong (centuries to crack)
+             */
+            calculateEntropy(password) {
+                const entropy = this.calculatePasswordEntropy(password);
+                
+                // Map entropy to score (0-60)
+                if (entropy < 28) return entropy * 0.5; // 0-14 points
+                if (entropy < 36) return 14 + (entropy - 28) * 1.5; // 14-26 points
+                if (entropy < 60) return 26 + (entropy - 36) * 1.0; // 26-50 points
+                return 50 + Math.min((entropy - 60) * 0.15, 10); // 50-60 points
+            },
+
+            /**
+             * Calculate diversity score based on character set usage
+             * Using multiple character types increases effective charset size
+             */
+            calculateDiversityScore(password) {
+                const diversity = PatternDetector.getCharsetDiversity(password);
+                
+                // Award points for each character set type used
+                // 1 set: 0 points, 2 sets: 5 points, 3 sets: 12 points, 4+ sets: 20 points
+                const diversityMap = {
+                    1: 0,
+                    2: 5,
+                    3: 12,
+                    4: 20,
+                    5: 20 // Unicode counts as 5th set
+                };
+                
+                return diversityMap[diversity] || 0;
+            },
+
+            /**
+             * Length bonus: NIST recommends minimum 8 chars, optimal 12+
+             */
+            calculateLengthBonus(length) {
+                if (length < 8) return 0;
+                if (length < 12) return 5;
+                if (length < 16) return 10;
+                if (length < 20) return 15;
+                return 20; // 20+ characters
+            },
+
+            /**
+             * Detect security-reducing patterns and calculate penalties
+             */
+            detectPatterns(password) {
+                const issues = [];
+                let penalty = 0;
+
+                // Critical issue: Common password (-50 points)
+                // These are in breach databases and will be cracked immediately
+                if (PatternDetector.isCommonPassword(password)) {
+                    issues.push({
+                        severity: 'critical',
+                        message: 'Common password',
+                        description: 'This password appears in breach databases and will be cracked instantly.'
+                    });
+                    penalty += 50;
+                }
+
+                // High severity: Repeated characters (-15 points)
+                if (PatternDetector.hasRepeatedCharacters(password)) {
+                    issues.push({
+                        severity: 'high',
+                        message: 'Repeated characters detected',
+                        description: 'Consecutive identical characters reduce password complexity.'
+                    });
+                    penalty += 15;
+                }
+
+                // High severity: Sequential characters (-15 points)
+                if (PatternDetector.hasSequentialCharacters(password)) {
+                    issues.push({
+                        severity: 'high',
+                        message: 'Sequential characters found',
+                        description: 'Patterns like "abc" or "123" are easily guessed by attackers.'
+                    });
+                    penalty += 15;
+                }
+
+                // Medium severity: Keyboard patterns (-20 points)
+                if (PatternDetector.hasKeyboardPattern(password)) {
+                    issues.push({
+                        severity: 'medium',
+                        message: 'Keyboard pattern detected',
+                        description: 'Patterns like "qwerty" are commonly targeted by password crackers.'
+                    });
+                    penalty += 20;
+                }
+
+                // Low severity: Predictable leet speak (-10 points)
+                // Leet speak provides false sense of security
+                if (PatternDetector.hasLeetSpeak(password)) {
+                    issues.push({
+                        severity: 'low',
+                        message: 'Predictable character substitution',
+                        description: 'Simple substitutions like @ for a or 0 for o are easily detected.'
+                    });
+                    penalty += 10;
+                }
+
+                // Low severity: Date patterns (-12 points)
+                if (PatternDetector.hasDatePattern(password)) {
+                    issues.push({
+                        severity: 'medium',
+                        message: 'Date pattern detected',
+                        description: 'Dates are easily guessable from public information.'
+                    });
+                    penalty += 12;
+                }
+
+                // Minimum length check (OWASP/NIST minimum is 8 characters)
+                if (password.length < 8) {
+                    issues.push({
+                        severity: 'critical',
+                        message: 'Password too short',
+                        description: 'Modern security standards recommend at least 8 characters.'
+                    });
+                    penalty += 25;
+                }
+
+                return { issues, penalty };
+            },
+
+            /**
+             * Generate actionable suggestions for improving password strength
+             */
+            generateSuggestions(password, patterns) {
+                const suggestions = [];
+                const charsets = PatternDetector.getCharacterSets(password);
+                const diversity = PatternDetector.getCharsetDiversity(password);
+
+                // Length-based suggestions
+                if (password.length < 8) {
+                    suggestions.push('Increase length to at least 8 characters (12+ recommended)');
+                } else if (password.length < 12) {
+                    suggestions.push('Consider increasing length to 12+ characters for better security');
+                }
+
+                // Charset diversity suggestions
+                if (diversity < 3) {
+                    if (!charsets.lowercase && !charsets.uppercase) {
+                        suggestions.push('Add letters (both uppercase and lowercase)');
+                    } else if (!charsets.uppercase) {
+                        suggestions.push('Include uppercase letters for better complexity');
+                    } else if (!charsets.lowercase) {
+                        suggestions.push('Include lowercase letters for better complexity');
+                    }
+                    
+                    if (!charsets.digits) {
+                        suggestions.push('Add numbers to increase character set diversity');
+                    }
+                    
+                    if (!charsets.symbols) {
+                        suggestions.push('Consider adding symbols (!, @, #, %, etc.)');
+                    }
+                }
+
+                // Pattern-specific suggestions
+                if (PatternDetector.isCommonPassword(password)) {
+                    suggestions.push('Use a unique password that isn\'t in common password lists');
+                }
+
+                if (PatternDetector.hasRepeatedCharacters(password) || 
+                    PatternDetector.hasSequentialCharacters(password) ||
+                    PatternDetector.hasKeyboardPattern(password)) {
+                    suggestions.push('Avoid predictable patterns, sequences, or repeated characters');
+                }
+
+                if (PatternDetector.hasDatePattern(password)) {
+                    suggestions.push('Avoid using dates which are easily discoverable');
+                }
+
+                if (PatternDetector.hasLeetSpeak(password)) {
+                    suggestions.push('Consider using random characters instead of predictable substitutions');
+                }
+
+                // General best practice suggestion if password is decent
+                if (suggestions.length === 0 && password.length < 16) {
+                    suggestions.push('Consider using a passphrase (multiple random words) for maximum security');
+                }
+
+                return suggestions;
+            },
+
+            /**
+             * Map numeric score to descriptive strength level
+             */
+            getStrengthLevel(score) {
+                if (score < 20) return 'very-weak';
+                if (score < 40) return 'weak';
+                if (score < 60) return 'fair';
+                if (score < 80) return 'good';
+                return 'strong';
+            },
+
+            /**
+             * Get human-readable label for strength level
+             */
+            getStrengthLabel(level) {
+                const labels = {
+                    'very-weak': 'Very Weak',
+                    'weak': 'Weak',
+                    'fair': 'Fair',
+                    'good': 'Good',
+                    'strong': 'Strong'
+                };
+                return labels[level] || '';
+            }
+        };
+
+        // ============================================================================
+        // UI RENDERER MODULE
+        // Handles all DOM manipulation and visual feedback
+        // ============================================================================
+        const UIRenderer = {
+            elements: {
+                passwordInput: null,
+                strengthBar: null,
+                strengthLabel: null,
+                feedbackSection: null,
+                feedbackContent: null,
+                suggestionsSection: null,
+                suggestionsList: null,
+                metrics: null
+            },
+
+            /**
+             * Initialize and cache DOM elements
+             */
+            init() {
+                this.elements = {
+                    passwordInput: document.getElementById('password'),
+                    strengthBar: document.getElementById('strengthBar'),
+                    strengthLabel: document.getElementById('strengthLabel'),
+                    feedbackSection: document.getElementById('feedbackSection'),
+                    feedbackContent: document.getElementById('feedbackContent'),
+                    suggestionsSection: document.getElementById('suggestionsSection'),
+                    suggestionsList: document.getElementById('suggestionsList'),
+                    metrics: document.getElementById('metrics')
+                };
+            },
+
+            /**
+             * Update strength bar visual indicator
+             */
+            updateStrengthBar(level) {
+                const bar = this.elements.strengthBar;
+                bar.className = 'strength-bar';
+                if (level !== 'none') {
+                    bar.classList.add(level);
+                }
+            },
+
+            /**
+             * Update strength label with badge
+             */
+            updateStrengthLabel(level) {
+                const label = this.elements.strengthLabel;
+                const labelText = PasswordScorer.getStrengthLabel(level);
+                
+                if (level === 'none' || !labelText) {
+                    label.innerHTML = '';
+                    return;
+                }
+
+                label.innerHTML = `
+                    <span>Password Strength:</span>
+                    <span class="badge ${level}">${labelText}</span>
+                `;
+            },
+
+            /**
+             * Render password metrics (length and entropy)
+             */
+            renderMetrics(result) {
+                if (!result || result.level === 'none') {
+                    this.elements.metrics.innerHTML = '';
+                    return;
+                }
+
+                this.elements.metrics.innerHTML = `
+                    <div class="metric">
+                        <div class="metric-value">${result.length}</div>
+                        <div class="metric-label">Characters</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${result.entropy}</div>
+                        <div class="metric-label">Bits of Entropy</div>
+                    </div>
+                `;
+            },
+
+            /**
+             * Render security issues found in password
+             */
+            renderIssues(issues) {
+                if (!issues || issues.length === 0) {
+                    return '';
+                }
+
+                const severityClass = {
+                    'critical': 'error',
+                    'high': 'error',
+                    'medium': 'warning',
+                    'low': 'warning'
+                };
+
+                return issues.map(issue => `
+                    <div class="feedback-item ${severityClass[issue.severity]}">
+                        <div class="feedback-title">${issue.message}</div>
+                        <div class="feedback-description">${issue.description}</div>
+                    </div>
+                `).join('');
+            },
+
+            /**
+             * Render suggestions for improvement
+             */
+            renderSuggestions(suggestions) {
+                const section = this.elements.suggestionsSection;
+                const list = this.elements.suggestionsList;
+
+                if (!suggestions || suggestions.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                section.style.display = 'block';
+                list.innerHTML = suggestions.map(s => `<li>${s}</li>`).join('');
+            },
+
+            /**
+             * Render positive feedback when password is strong
+             */
+            renderSuccessFeedback(score) {
+                if (score >= 80) {
+                    return `
+                        <div class="feedback-item success">
+                            <div class="feedback-title">Strong Password</div>
+                            <div class="feedback-description">This password has good entropy and no obvious weaknesses.</div>
+                        </div>
+                    `;
+                }
+                return '';
+            },
+
+            /**
+             * Update complete UI based on scoring result
+             */
+            update(result) {
+                if (!result || result.level === 'none') {
+                    // Reset UI when input is empty
+                    this.updateStrengthBar('none');
+                    this.updateStrengthLabel('none');
+                    this.elements.feedbackSection.classList.remove('show');
+                    this.renderMetrics(null);
+                    return;
+                }
+
+                // Update visual indicators
+                this.updateStrengthBar(result.level);
+                this.updateStrengthLabel(result.level);
+                this.renderMetrics(result);
+
+                // Update feedback
+                const feedbackHTML = this.renderIssues(result.issues) + 
+                                   this.renderSuccessFeedback(result.score);
+                
+                this.elements.feedbackContent.innerHTML = feedbackHTML;
+                this.renderSuggestions(result.suggestions);
+
+                // Show feedback section
+                this.elements.feedbackSection.classList.add('show');
+            }
+        };
+
+        // ============================================================================
+        // MAIN CONTROLLER
+        // Coordinates all modules and handles user interactions
+        // ============================================================================
+        const PasswordChecker = {
+            /**
+             * Initialize the application
+             */
+            init() {
+                UIRenderer.init();
+                this.attachEventListeners();
+            },
+
+            /**
+             * Attach event listeners for user interactions
+             */
+            attachEventListeners() {
+                const passwordInput = document.getElementById('password');
+                const toggleBtn = document.getElementById('toggleBtn');
+
+                // Real-time password evaluation
+                // Use 'input' event for immediate feedback as user types
+                passwordInput.addEventListener('input', (e) => {
+                    this.evaluatePassword(e.target.value);
+                });
+
+                // Toggle password visibility
+                toggleBtn.addEventListener('click', () => {
+                    this.togglePasswordVisibility();
+                });
+            },
+
+            /**
+             * Evaluate password and update UI
+             * This is the main entry point for password analysis
+             */
+            evaluatePassword(password) {
+                // Calculate comprehensive strength analysis
+                const result = PasswordScorer.calculateScore(password);
+                
+                // Update UI with results
+                UIRenderer.update(result);
+            },
+
+            /**
+             * Toggle password visibility (show/hide)
+             */
+            togglePasswordVisibility() {
+                const input = document.getElementById('password');
+                const eyeIcon = document.querySelector('.eye-icon');
+                const eyeOffIcon = document.querySelector('.eye-off-icon');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    eyeIcon.style.display = 'none';
+                    eyeOffIcon.style.display = 'block';
+                } else {
+                    input.type = 'password';
+                    eyeIcon.style.display = 'block';
+                    eyeOffIcon.style.display = 'none';
+                }
+            }
+        };
+
+        // ============================================================================
+        // APPLICATION ENTRY POINT
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            PasswordChecker.init();
+        });
+    </script>
+</body>
+</html>
